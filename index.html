@@ -9,14 +9,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{background:#f4f6f9;}
-.header{background:#0d6efd;color:white;padding:15px;border-radius:10px;}
-.card-box{background:white;padding:15px;border-radius:10px;margin-top:15px;}
-.hidden{display:none;}
-@media print{
-body *{visibility:hidden;}
-#printArea, #printArea *{visibility:visible;}
-#printArea{position:absolute;left:0;top:0;width:100%;}
+body { background:#f4f6f9; }
+.header { background:#0d6efd; color:white; padding:15px; border-radius:10px; }
+.card-box { background:white; padding:15px; border-radius:10px; margin-top:15px; }
+.hidden { display:none; }
+@media print {
+    body * { visibility: hidden; }
+    #invoiceSection, #invoiceSection * { visibility: visible; }
+    #invoiceSection { position:absolute; left:0; top:0; width:100%; }
 }
 </style>
 </head>
@@ -24,217 +24,218 @@ body *{visibility:hidden;}
 <body>
 <div class="container py-4">
 
-<div id="loginSection" class="card-box">
-<h4 class="text-center">🔐 লগইন</h4>
+<!-- Login -->
+<div id="loginSection" class="card-box shadow-sm">
+<h4 class="text-center">🔐 POS লগইন</h4>
 <input type="password" id="passwordInput" class="form-control mt-3" placeholder="পাসওয়ার্ড">
 <button class="btn btn-primary w-100 mt-3" onclick="login()">লগইন</button>
-<p id="loginMsg" class="text-danger mt-2"></p>
+<p class="text-center mt-3" id="loginMessage"></p>
 </div>
 
-<div id="app" class="hidden">
+<!-- Main App -->
+<div id="mainApp" class="hidden">
 
 <div class="header text-center mb-3">
 <h4>ইমরান ইলেকট্রনিক্স এন্ড মোবাইল সার্ভিসিং সেন্টার</h4>
-<p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর</p>
-<p>মোবাইল: ০১৯৫২৩২৫৯০৩</p>
-<button class="btn btn-light btn-sm" onclick="logout()">লগআউট</button>
+<p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর<br>
+মোবাইল: ০১৯৫২৩২৫৯০৩</p>
+<button class="btn btn-light btn-sm float-end" onclick="logout()">লগআউট</button>
 </div>
 
+<!-- Add Product -->
 <div class="card-box">
-<h5>📦 পণ্য যোগ করুন</h5>
+<h5>➕ পণ্য যোগ করুন</h5>
 <input id="pName" class="form-control mt-2" placeholder="পণ্যের নাম">
-<input id="pBuy" type="number" class="form-control mt-2" placeholder="ক্রয়মূল্য">
-<input id="pSell" type="number" class="form-control mt-2" placeholder="বিক্রয়মূল্য">
+<input id="pPrice" type="number" class="form-control mt-2" placeholder="বিক্রয় মূল্য">
+<input id="pCost" type="number" class="form-control mt-2" placeholder="ক্রয় মূল্য">
 <input id="pStock" type="number" class="form-control mt-2" placeholder="স্টক">
-<button class="btn btn-success w-100 mt-2" onclick="addProduct()">যোগ করুন</button>
+<button class="btn btn-success mt-2" onclick="addProduct()">Add Product</button>
 </div>
 
+<!-- Sales Section -->
 <div class="card-box">
-<h5>🛒 বিক্রয় করুন</h5>
-<input id="customerName" class="form-control mt-2" placeholder="কাস্টমারের নাম">
-<select id="saleProduct" class="form-control mt-2" onchange="calculateLive()"></select>
-<input id="saleQty" type="number" class="form-control mt-2" placeholder="পরিমাণ" oninput="calculateLive()">
-<p class="mt-2">মোট বিল: <strong><span id="liveTotal">0</span> ৳</strong></p>
-<input id="paidAmount" type="number" class="form-control mt-2" placeholder="পরিশোধ করেছে" oninput="calculateLive()">
-<p>বাকি: <strong><span id="liveDue">0</span> ৳</strong></p>
-<button class="btn btn-primary w-100 mt-2" onclick="makeSale()">বিক্রয় করুন</button>
-</div>
+<h5>🛒 বিক্রয়</h5>
 
-<div class="card-box">
-<h5>📄 বিক্রয়ের তালিকা</h5>
-<table class="table table-bordered">
+<select id="productSelect" class="form-control mt-2"></select>
+<input id="qty" type="number" class="form-control mt-2" placeholder="পরিমাণ">
+<button class="btn btn-primary mt-2" onclick="addToCart()">Add To Cart</button>
+
+<table class="table mt-3">
 <thead>
 <tr>
-<th>Invoice</th><th>কাস্টমার</th><th>পণ্য</th><th>মোট</th><th>পরিশোধ</th><th>বাকি</th><th>অ্যাকশন</th>
+<th>পণ্য</th>
+<th>পরিমাণ</th>
+<th>দাম</th>
+<th>মোট</th>
+<th></th>
 </tr>
 </thead>
-<tbody id="saleTable"></tbody>
+<tbody id="cartTable"></tbody>
 </table>
+
+<div>
+মোট: <span id="subtotal">0</span> ৳ <br>
+Paid: <input type="number" id="paid" oninput="calculateDue()"><br>
+Due: <span id="due">0</span> ৳
 </div>
 
-<div class="card-box">
-<h5>📊 সারাংশ</h5>
-<p>মোট বিক্রয়: <span id="totalSale">0</span> ৳</p>
-<p>মোট লাভ: <span id="totalProfit">0</span> ৳</p>
-<p>মোট বাকি: <span id="totalDue">0</span> ৳</p>
+<button class="btn btn-success mt-2" onclick="finalizeSale()">Final Sale</button>
+<button class="btn btn-secondary mt-2" onclick="printInvoice()">Print</button>
+
 </div>
 
+<!-- Report -->
 <div class="card-box">
 <h5>📊 রিপোর্ট</h5>
-<canvas id="chart"></canvas>
+<canvas id="salesChart"></canvas>
 </div>
 
-<button class="btn btn-danger w-100 mt-3" onclick="resetData()">সব ডাটা ডিলিট</button>
+<!-- Invoice Print Section -->
+<div id="invoiceSection" class="hidden"></div>
 
 </div>
 </div>
-
-<div id="printArea" class="hidden p-4"></div>
 
 <script>
-
-let products=JSON.parse(localStorage.getItem("products"))||[];
-let sales=JSON.parse(localStorage.getItem("sales"))||[];
-let invoiceCounter=+localStorage.getItem("invoiceCounter")||1;
-let chartInstance=null;
-
-if(localStorage.getItem("loggedIn")==="true"){
-loginSection.classList.add("hidden");
-app.classList.remove("hidden");
-init();
-}
+let products = JSON.parse(localStorage.getItem("products")) || [];
+let sales = JSON.parse(localStorage.getItem("sales")) || [];
+let cart = [];
+let invoiceCounter = localStorage.getItem("invoiceCounter") || 1;
 
 function login(){
-let pass=passwordInput.value;
-let saved=localStorage.getItem("posPass");
+let input=passwordInput.value;
+let saved=localStorage.getItem("posPassword");
 if(!saved){
-localStorage.setItem("posPass",pass);
-alert("পাসওয়ার্ড সেট হয়েছে। আবার লগইন করুন");
+localStorage.setItem("posPassword",input);
+loginMessage.innerText="পাসওয়ার্ড সেট হয়েছে";
 return;
 }
-if(pass===saved){
-localStorage.setItem("loggedIn","true");
-init();
+if(input===saved){
 loginSection.classList.add("hidden");
-app.classList.remove("hidden");
+mainApp.classList.remove("hidden");
+loadProducts();
+updateChart();
 }else{
-loginMsg.innerText="ভুল পাসওয়ার্ড";
+loginMessage.innerText="ভুল পাসওয়ার্ড";
 }
 }
 
 function logout(){
-localStorage.setItem("loggedIn","false");
-location.reload();
-}
-
-function init(){
-updateProductList();
-updateTable();
-updateSummary();
-updateChart();
+mainApp.classList.add("hidden");
+loginSection.classList.remove("hidden");
 }
 
 function addProduct(){
-if(!pName.value||!pBuy.value||!pSell.value||!pStock.value){alert("সব তথ্য দিন");return;}
-if(products.find(p=>p.name===pName.value)){alert("এই পণ্য আগেই আছে");return;}
-products.push({name:pName.value,buy:+pBuy.value,sell:+pSell.value,stock:+pStock.value});
+let name=pName.value;
+let price=parseFloat(pPrice.value);
+let cost=parseFloat(pCost.value);
+let stock=parseInt(pStock.value);
+if(!name||price<=0||cost<0||stock<0){alert("সঠিক তথ্য দিন");return;}
+products.push({name,price,cost,stock});
 localStorage.setItem("products",JSON.stringify(products));
-updateProductList();
+loadProducts();
 alert("পণ্য যোগ হয়েছে");
 }
 
-function updateProductList(){
-saleProduct.innerHTML="";
-products.forEach((p,i)=>{
-saleProduct.innerHTML+=`<option value="${i}">${p.name} (স্টক:${p.stock})</option>`;
+function loadProducts(){
+let select=document.getElementById("productSelect");
+select.innerHTML="";
+products.forEach(p=>{
+select.innerHTML+=`<option value="${p.name}">${p.name} (স্টক: ${p.stock})</option>`;
 });
 }
 
-function calculateLive(){
-let i=saleProduct.value;
-let qty=+saleQty.value||0;
-let paid=+paidAmount.value||0;
-if(!products[i])return;
-let total=qty*products[i].sell;
-if(paid>total)paid=total;
-liveTotal.innerText=total;
-liveDue.innerText=total-paid;
+function addToCart(){
+let name=productSelect.value;
+let qty=parseInt(document.getElementById("qty").value);
+if(!name||qty<=0){alert("সঠিক পরিমাণ দিন");return;}
+let product=products.find(p=>p.name===name);
+if(product.stock<qty){alert("স্টক কম");return;}
+let existing=cart.find(c=>c.name===name);
+if(existing){existing.qty+=qty;}
+else{cart.push({name,price:product.price,cost:product.cost,qty});}
+updateCart();
 }
 
-function makeSale(){
-let i=saleProduct.value;
-let qty=+saleQty.value;
-let paid=+paidAmount.value||0;
-let customer=customerName.value.trim();
-
-if(!customer){alert("কাস্টমার নাম দিন");return;}
-if(qty<=0){alert("সঠিক পরিমাণ দিন");return;}
-if(products[i].stock<qty){alert("স্টক কম");return;}
-
-let total=qty*products[i].sell;
-if(paid>total)paid=total;
-let due=total-paid;
-let profit=qty*(products[i].sell-products[i].buy);
-
-products[i].stock-=qty;
-
-let date=new Date().toISOString().split("T")[0];
-
-sales.push({
-invoice:invoiceCounter++,
-customer,name:products[i].name,
-qty,total,paid,due,profit,date
-});
-
-localStorage.setItem("invoiceCounter",invoiceCounter);
-localStorage.setItem("products",JSON.stringify(products));
-localStorage.setItem("sales",JSON.stringify(sales));
-
-init();
-clearSaleForm();
-}
-
-function clearSaleForm(){
-saleQty.value="";
-paidAmount.value="";
-customerName.value="";
-liveTotal.innerText="0";
-liveDue.innerText="0";
-}
-
-function updateTable(){
-saleTable.innerHTML="";
-sales.forEach((s,i)=>{
-saleTable.innerHTML+=`
-<tr>
-<td>${s.invoice}</td>
-<td>${s.customer}</td>
-<td>${s.name}</td>
-<td>${s.total}</td>
-<td>${s.paid}</td>
-<td>${s.due}</td>
-<td>
-<button class="btn btn-sm btn-info" onclick="printInvoice(${i})">🖨</button>
-<button class="btn btn-sm btn-danger" onclick="deleteSale(${i})">❌</button>
-</td>
+function updateCart(){
+let table=document.getElementById("cartTable");
+table.innerHTML="";
+let total=0;
+cart.forEach((item,i)=>{
+let rowTotal=item.price*item.qty;
+total+=rowTotal;
+table.innerHTML+=`<tr>
+<td>${item.name}</td>
+<td>${item.qty}</td>
+<td>${item.price}</td>
+<td>${rowTotal}</td>
+<td><button onclick="removeItem(${i})" class="btn btn-danger btn-sm">X</button></td>
 </tr>`;
 });
+subtotal.innerText=total;
+calculateDue();
 }
 
-function deleteSale(i){
-products.find(p=>p.name===sales[i].name).stock+=sales[i].qty;
-sales.splice(i,1);
+function removeItem(i){
+cart.splice(i,1);
+updateCart();
+}
+
+function calculateDue(){
+let total=parseFloat(subtotal.innerText)||0;
+let paid=parseFloat(document.getElementById("paid").value)||0;
+if(paid>total){alert("Paid বেশি দেয়া যাবে না");paid=total;paid.value=total;}
+due.innerText=total-paid;
+}
+
+function finalizeSale(){
+if(cart.length==0){alert("কার্ট খালি");return;}
+let total=parseFloat(subtotal.innerText);
+let paid=parseFloat(document.getElementById("paid").value)||0;
+let dueAmount=total-paid;
+let profit=0;
+cart.forEach(item=>{
+let product=products.find(p=>p.name===item.name);
+product.stock-=item.qty;
+profit+=(item.price-item.cost)*item.qty;
+});
+let invoice="INV-"+invoiceCounter.toString().padStart(4,"0");
+sales.push({invoice,items:cart,total,paid,due:dueAmount,profit,date:new Date().toISOString().split("T")[0]});
 localStorage.setItem("sales",JSON.stringify(sales));
 localStorage.setItem("products",JSON.stringify(products));
-init();
+invoiceCounter++;
+localStorage.setItem("invoiceCounter",invoiceCounter);
+generateInvoice(invoice);
+cart=[];
+updateCart();
+loadProducts();
+updateChart();
+alert("বিক্রয় সম্পন্ন");
 }
 
-function updateSummary(){
-let t=0,p=0,d=0;
-sales.forEach(s=>{t+=s.total;p+=s.profit;d+=s.due});
-totalSale.innerText=t;
-totalProfit.innerText=p;
-totalDue.innerText=d;
+function generateInvoice(inv){
+let sale=sales.find(s=>s.invoice===inv);
+let html=`<h4>ইমরান ইলেকট্রনিক্স এন্ড মোবাইল সার্ভিসিং সেন্টার</h4>
+<p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর<br>মোবাইল: ০১৯৫২৩২৫৯০৩</p>
+<hr>
+Invoice: ${sale.invoice}<br>
+Date: ${sale.date}
+<table class="table">
+<tr><th>পণ্য</th><th>পরিমাণ</th><th>দাম</th><th>মোট</th></tr>`;
+sale.items.forEach(i=>{
+html+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${i.price*i.qty}</td></tr>`;
+});
+html+=`</table>
+Total: ${sale.total} ৳<br>
+Paid: ${sale.paid} ৳<br>
+Due: ${sale.due} ৳`;
+invoiceSection.innerHTML=html;
+}
+
+function printInvoice(){
+invoiceSection.classList.remove("hidden");
+window.print();
+invoiceSection.classList.add("hidden");
 }
 
 function updateChart(){
@@ -243,46 +244,13 @@ sales.forEach(s=>{
 if(!dates[s.date])dates[s.date]=0;
 dates[s.date]+=s.total;
 });
-if(chartInstance)chartInstance.destroy();
-chartInstance=new Chart(chart,{
+new Chart(document.getElementById("salesChart"),{
 type:"bar",
 data:{labels:Object.keys(dates),
-datasets:[{label:"Daily Sales",data:Object.values(dates)}]}
+datasets:[{label:"Daily Sales ৳",data:Object.values(dates)}]}
 });
 }
-
-function printInvoice(i){
-let s=sales[i];
-printArea.classList.remove("hidden");
-printArea.innerHTML=`
-<h3>ইমরান ইলেকট্রনিক্স এন্ড মোবাইল সার্ভিসিং সেন্টার</h3>
-<p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর</p>
-<p>মোবাইল: ০১৯৫২৩২৫৯০৩</p>
-<hr>
-<p>Invoice: ${s.invoice}</p>
-<p>তারিখ: ${s.date}</p>
-<p>কাস্টমার: ${s.customer}</p>
-<p>পণ্য: ${s.name}</p>
-<p>পরিমাণ: ${s.qty}</p>
-<p>মোট: ${s.total} ৳</p>
-<p>পরিশোধ: ${s.paid} ৳</p>
-<p>বাকি: ${s.due} ৳</p>
-<hr>
-<p>ধন্যবাদ</p>
-`;
-window.print();
-printArea.classList.add("hidden");
-}
-
-function resetData(){
-if(confirm("সব ডাটা ডিলিট করবেন?")){
-localStorage.removeItem("products");
-localStorage.removeItem("sales");
-localStorage.removeItem("invoiceCounter");
-location.reload();
-}
-}
-
 </script>
+
 </body>
 </html>
