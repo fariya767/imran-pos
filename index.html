@@ -28,7 +28,7 @@ body *{visibility:hidden;}
 <h4 class="text-center">🔐 লগইন</h4>
 <input type="password" id="passwordInput" class="form-control mt-3" placeholder="পাসওয়ার্ড">
 <button class="btn btn-primary w-100 mt-3" onclick="login()">লগইন</button>
-<p id="loginMsg" class="text-center text-danger mt-2"></p>
+<p id="loginMsg" class="text-danger mt-2"></p>
 </div>
 
 <div id="app" class="hidden">
@@ -40,7 +40,6 @@ body *{visibility:hidden;}
 <button class="btn btn-light btn-sm" onclick="logout()">লগআউট</button>
 </div>
 
-<!-- PRODUCT ADD -->
 <div class="card-box">
 <h5>📦 পণ্য যোগ করুন</h5>
 <input id="pName" class="form-control mt-2" placeholder="পণ্যের নাম">
@@ -50,49 +49,34 @@ body *{visibility:hidden;}
 <button class="btn btn-success w-100 mt-2" onclick="addProduct()">যোগ করুন</button>
 </div>
 
-<!-- PRODUCT TABLE -->
-<div class="card-box">
-<h5>📋 স্টক তালিকা</h5>
-<table class="table table-bordered">
-<thead><tr><th>নাম</th><th>ক্রয়</th><th>বিক্রয়</th><th>স্টক</th></tr></thead>
-<tbody id="productTable"></tbody>
-</table>
-</div>
-
-<!-- SALE -->
 <div class="card-box">
 <h5>🛒 বিক্রয় করুন</h5>
 <input id="customerName" class="form-control mt-2" placeholder="কাস্টমারের নাম">
-<select id="saleProduct" class="form-control mt-2"></select>
-<input id="saleQty" type="number" class="form-control mt-2" placeholder="পরিমাণ">
-<input id="paidAmount" type="number" class="form-control mt-2" placeholder="কত টাকা পরিশোধ করেছে">
+<select id="saleProduct" class="form-control mt-2" onchange="calculateLive()"></select>
+<input id="saleQty" type="number" class="form-control mt-2" placeholder="পরিমাণ" oninput="calculateLive()">
+<p class="mt-2">মোট বিল: <strong><span id="liveTotal">0</span> ৳</strong></p>
+<input id="paidAmount" type="number" class="form-control mt-2" placeholder="পরিশোধ করেছে" oninput="calculateLive()">
+<p>বাকি: <strong><span id="liveDue">0</span> ৳</strong></p>
 <button class="btn btn-primary w-100 mt-2" onclick="makeSale()">বিক্রয় করুন</button>
 </div>
 
-<!-- SUMMARY -->
+<div class="card-box">
+<h5>📄 বিক্রয়ের তালিকা</h5>
+<table class="table table-bordered">
+<thead>
+<tr>
+<th>Invoice</th><th>কাস্টমার</th><th>পণ্য</th><th>মোট</th><th>পরিশোধ</th><th>বাকি</th><th>অ্যাকশন</th>
+</tr>
+</thead>
+<tbody id="saleTable"></tbody>
+</table>
+</div>
+
 <div class="card-box">
 <h5>📊 সারাংশ</h5>
 <p>মোট বিক্রয়: <span id="totalSale">0</span> ৳</p>
 <p>মোট লাভ: <span id="totalProfit">0</span> ৳</p>
 <p>মোট বাকি: <span id="totalDue">0</span> ৳</p>
-</div>
-
-<!-- SALES TABLE -->
-<div class="card-box">
-<h5>📄 বিক্রয়ের তালিকা</h5>
-<table class="table table-bordered">
-<thead><tr><th>কাস্টমার</th><th>পণ্য</th><th>পরিমাণ</th><th>মোট</th><th>পরিশোধ</th><th>বাকি</th><th>অ্যাকশন</th></tr></thead>
-<tbody id="saleTable"></tbody>
-</table>
-</div>
-
-<!-- DUE TABLE -->
-<div class="card-box">
-<h5>💰 বাকি খাতা</h5>
-<table class="table table-bordered">
-<thead><tr><th>কাস্টমার</th><th>বাকি</th><th>পেমেন্ট দিন</th></tr></thead>
-<tbody id="dueTable"></tbody>
-</table>
 </div>
 
 <div class="card-box">
@@ -111,6 +95,7 @@ body *{visibility:hidden;}
 
 let products=JSON.parse(localStorage.getItem("products"))||[];
 let sales=JSON.parse(localStorage.getItem("sales"))||[];
+let invoiceCounter=+localStorage.getItem("invoiceCounter")||1;
 let chartInstance=null;
 
 if(localStorage.getItem("loggedIn")==="true"){
@@ -129,9 +114,9 @@ return;
 }
 if(pass===saved){
 localStorage.setItem("loggedIn","true");
+init();
 loginSection.classList.add("hidden");
 app.classList.remove("hidden");
-init();
 }else{
 loginMsg.innerText="ভুল পাসওয়ার্ড";
 }
@@ -144,19 +129,17 @@ location.reload();
 
 function init(){
 updateProductList();
-updateProductTable();
-updateSummary();
 updateTable();
-updateDueTable();
+updateSummary();
 updateChart();
 }
 
 function addProduct(){
-let p={name:pName.value,buy:+pBuy.value,sell:+pSell.value,stock:+pStock.value};
-products.push(p);
+if(!pName.value||!pBuy.value||!pSell.value||!pStock.value){alert("সব তথ্য দিন");return;}
+if(products.find(p=>p.name===pName.value)){alert("এই পণ্য আগেই আছে");return;}
+products.push({name:pName.value,buy:+pBuy.value,sell:+pSell.value,stock:+pStock.value});
 localStorage.setItem("products",JSON.stringify(products));
 updateProductList();
-updateProductTable();
 alert("পণ্য যোগ হয়েছে");
 }
 
@@ -167,57 +150,73 @@ saleProduct.innerHTML+=`<option value="${i}">${p.name} (স্টক:${p.stock})
 });
 }
 
-function updateProductTable(){
-productTable.innerHTML="";
-products.forEach(p=>{
-productTable.innerHTML+=`<tr>
-<td>${p.name}</td><td>${p.buy}</td><td>${p.sell}</td><td>${p.stock}</td>
-</tr>`;
-});
+function calculateLive(){
+let i=saleProduct.value;
+let qty=+saleQty.value||0;
+let paid=+paidAmount.value||0;
+if(!products[i])return;
+let total=qty*products[i].sell;
+if(paid>total)paid=total;
+liveTotal.innerText=total;
+liveDue.innerText=total-paid;
 }
 
 function makeSale(){
 let i=saleProduct.value;
 let qty=+saleQty.value;
-let paid=+paidAmount.value;
-let customer=customerName.value;
+let paid=+paidAmount.value||0;
+let customer=customerName.value.trim();
 
+if(!customer){alert("কাস্টমার নাম দিন");return;}
+if(qty<=0){alert("সঠিক পরিমাণ দিন");return;}
 if(products[i].stock<qty){alert("স্টক কম");return;}
 
 let total=qty*products[i].sell;
-let profit=qty*(products[i].sell-products[i].buy);
+if(paid>total)paid=total;
 let due=total-paid;
+let profit=qty*(products[i].sell-products[i].buy);
 
 products[i].stock-=qty;
 
-sales.push({customer,name:products[i].name,qty,total,profit,paid,due,date:new Date().toLocaleDateString()});
+let date=new Date().toISOString().split("T")[0];
 
-localStorage.setItem("sales",JSON.stringify(sales));
+sales.push({
+invoice:invoiceCounter++,
+customer,name:products[i].name,
+qty,total,paid,due,profit,date
+});
+
+localStorage.setItem("invoiceCounter",invoiceCounter);
 localStorage.setItem("products",JSON.stringify(products));
+localStorage.setItem("sales",JSON.stringify(sales));
 
 init();
-printInvoice(customer,products[i].name,qty,total,paid,due);
+clearSaleForm();
 }
 
-function updateSummary(){
-let t=0,p=0,d=0;
-sales.forEach(s=>{t+=s.total;p+=s.profit;d+=s.due});
-totalSale.innerText=t;
-totalProfit.innerText=p;
-totalDue.innerText=d;
+function clearSaleForm(){
+saleQty.value="";
+paidAmount.value="";
+customerName.value="";
+liveTotal.innerText="0";
+liveDue.innerText="0";
 }
 
 function updateTable(){
 saleTable.innerHTML="";
 sales.forEach((s,i)=>{
-saleTable.innerHTML+=`<tr>
+saleTable.innerHTML+=`
+<tr>
+<td>${s.invoice}</td>
 <td>${s.customer}</td>
 <td>${s.name}</td>
-<td>${s.qty}</td>
 <td>${s.total}</td>
 <td>${s.paid}</td>
 <td>${s.due}</td>
-<td><button class="btn btn-sm btn-danger" onclick="deleteSale(${i})">ডিলিট</button></td>
+<td>
+<button class="btn btn-sm btn-info" onclick="printInvoice(${i})">🖨</button>
+<button class="btn btn-sm btn-danger" onclick="deleteSale(${i})">❌</button>
+</td>
 </tr>`;
 });
 }
@@ -230,24 +229,12 @@ localStorage.setItem("products",JSON.stringify(products));
 init();
 }
 
-function updateDueTable(){
-dueTable.innerHTML="";
-sales.filter(s=>s.due>0).forEach((s,i)=>{
-dueTable.innerHTML+=`<tr>
-<td>${s.customer}</td>
-<td>${s.due}</td>
-<td><button class="btn btn-sm btn-success" onclick="payDue(${i})">পেমেন্ট</button></td>
-</tr>`;
-});
-}
-
-function payDue(i){
-let amount=prompt("কত টাকা দিল?");
-if(!amount)return;
-sales[i].paid+=+amount;
-sales[i].due-=+amount;
-localStorage.setItem("sales",JSON.stringify(sales));
-init();
+function updateSummary(){
+let t=0,p=0,d=0;
+sales.forEach(s=>{t+=s.total;p+=s.profit;d+=s.due});
+totalSale.innerText=t;
+totalProfit.innerText=p;
+totalDue.innerText=d;
 }
 
 function updateChart(){
@@ -257,27 +244,29 @@ if(!dates[s.date])dates[s.date]=0;
 dates[s.date]+=s.total;
 });
 if(chartInstance)chartInstance.destroy();
-chartInstance=new Chart(document.getElementById("chart"),{
+chartInstance=new Chart(chart,{
 type:"bar",
 data:{labels:Object.keys(dates),
 datasets:[{label:"Daily Sales",data:Object.values(dates)}]}
 });
 }
 
-function printInvoice(customer,name,qty,total,paid,due){
+function printInvoice(i){
+let s=sales[i];
 printArea.classList.remove("hidden");
 printArea.innerHTML=`
 <h3>ইমরান ইলেকট্রনিক্স এন্ড মোবাইল সার্ভিসিং সেন্টার</h3>
 <p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর</p>
 <p>মোবাইল: ০১৯৫২৩২৫৯০৩</p>
 <hr>
-<p>তারিখ: ${new Date().toLocaleString()}</p>
-<p>কাস্টমার: ${customer}</p>
-<p>পণ্য: ${name}</p>
-<p>পরিমাণ: ${qty}</p>
-<p>মোট: ${total} ৳</p>
-<p>পরিশোধ: ${paid} ৳</p>
-<p>বাকি: ${due} ৳</p>
+<p>Invoice: ${s.invoice}</p>
+<p>তারিখ: ${s.date}</p>
+<p>কাস্টমার: ${s.customer}</p>
+<p>পণ্য: ${s.name}</p>
+<p>পরিমাণ: ${s.qty}</p>
+<p>মোট: ${s.total} ৳</p>
+<p>পরিশোধ: ${s.paid} ৳</p>
+<p>বাকি: ${s.due} ৳</p>
 <hr>
 <p>ধন্যবাদ</p>
 `;
@@ -287,7 +276,9 @@ printArea.classList.add("hidden");
 
 function resetData(){
 if(confirm("সব ডাটা ডিলিট করবেন?")){
-localStorage.clear();
+localStorage.removeItem("products");
+localStorage.removeItem("sales");
+localStorage.removeItem("invoiceCounter");
 location.reload();
 }
 }
