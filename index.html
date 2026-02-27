@@ -9,121 +9,226 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { background:#f4f6f9; }
-.header { background:#0d6efd; color:white; padding:15px; border-radius:10px; }
-.summary-box { padding:10px; border-radius:8px; color:white; text-align:center; margin-bottom:10px; }
-.sale-box { background:#198754; }
-.profit-box { background:#6f42c1; }
-.footer { font-size:12px; color:gray; text-align:center; margin-top:20px; }
-.card-box { background:white; padding:15px; border-radius:10px; margin-top:15px; }
-.hidden { display:none; }
+body{background:#f4f6f9;}
+.header{background:#0d6efd;color:white;padding:15px;border-radius:10px;}
+.card-box{background:white;padding:15px;border-radius:10px;margin-top:15px;}
+.hidden{display:none;}
+.summary{font-weight:bold;font-size:18px;}
+@media print{
+body *{visibility:hidden;}
+#printArea, #printArea *{visibility:visible;}
+#printArea{position:absolute;left:0;top:0;width:100%;}
+}
 </style>
 </head>
 
 <body>
-
 <div class="container py-4">
 
-<!-- Login Section -->
-<div id="loginSection" class="card-box shadow-sm">
-<h4 class="text-center">🔐 POS লগইন</h4>
-<input type="password" id="passwordInput" class="form-control mt-3" placeholder="পাসওয়ার্ড লিখুন">
+<!-- LOGIN -->
+<div id="loginSection" class="card-box">
+<h4 class="text-center">🔐 লগইন</h4>
+<input type="password" id="passwordInput" class="form-control mt-3" placeholder="পাসওয়ার্ড">
 <button class="btn btn-primary w-100 mt-3" onclick="login()">লগইন</button>
-<p class="text-center mt-3" id="loginMessage"></p>
+<p id="loginMsg" class="text-center mt-2 text-danger"></p>
 </div>
 
-<!-- Main POS -->
-<div id="mainApp" class="hidden">
+<!-- MAIN APP -->
+<div id="app" class="hidden">
 
 <div class="header text-center mb-3">
-<h4>ইমরান ইলেকট্রনিক্স অ্যান্ড মোবাইল সার্ভিসিং সেন্টার</h4>
-<button class="btn btn-light btn-sm float-end" onclick="logout()">লগআউট</button>
+<h4>ইমরান ইলেকট্রনিক্স এন্ড মোবাইল সার্ভিসিং সেন্টার</h4>
+<p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর</p>
+<p>মোবাইল: ০১৯৫২৩২৫৯০৩</p>
+<button class="btn btn-light btn-sm" onclick="logout()">লগআউট</button>
 </div>
 
-<div class="summary-box sale-box">
-মোট বিক্রয়: <span id="grandTotal">0</span> ৳
+<!-- ADD PRODUCT -->
+<div class="card-box">
+<h5>📦 পণ্য যোগ করুন</h5>
+<input id="pName" class="form-control mt-2" placeholder="পণ্যের নাম">
+<input id="pBuy" type="number" class="form-control mt-2" placeholder="ক্রয়মূল্য">
+<input id="pSell" type="number" class="form-control mt-2" placeholder="বিক্রয়মূল্য">
+<input id="pStock" type="number" class="form-control mt-2" placeholder="স্টক">
+<button class="btn btn-success w-100 mt-2" onclick="addProduct()">যোগ করুন</button>
 </div>
 
-<div class="summary-box profit-box">
-মোট লাভ: <span id="grandProfit">0</span> ৳
+<!-- SALE -->
+<div class="card-box">
+<h5>🛒 বিক্রয় করুন</h5>
+<select id="saleProduct" class="form-control mt-2"></select>
+<input id="saleQty" type="number" class="form-control mt-2" placeholder="পরিমাণ">
+<button class="btn btn-primary w-100 mt-2" onclick="makeSale()">বিক্রয় করুন</button>
 </div>
 
-<div class="card-box shadow-sm">
+<!-- SUMMARY -->
+<div class="card-box">
+<div class="summary">মোট বিক্রয়: <span id="totalSale">0</span> ৳</div>
+<div class="summary">মোট লাভ: <span id="totalProfit">0</span> ৳</div>
+</div>
+
+<!-- SALES TABLE -->
+<div class="card-box">
+<h5>📄 বিক্রয়ের তালিকা</h5>
+<table class="table table-bordered">
+<thead><tr><th>নাম</th><th>পরিমাণ</th><th>মোট</th><th>লাভ</th><th>অ্যাকশন</th></tr></thead>
+<tbody id="saleTable"></tbody>
+</table>
+</div>
+
+<!-- REPORT -->
+<div class="card-box">
 <h5>📊 রিপোর্ট</h5>
-<canvas id="salesChart"></canvas>
+<canvas id="chart"></canvas>
 </div>
 
-<div class="footer">
-© 2026 Imran Electronics POS System
-</div>
+<button class="btn btn-danger w-100 mt-3" onclick="resetData()">সব ডাটা ডিলিট</button>
 
 </div>
-
 </div>
+
+<!-- PRINT AREA -->
+<div id="printArea" class="p-4 hidden"></div>
 
 <script>
 
-let sales = JSON.parse(localStorage.getItem("sales")) || [];
+let products=JSON.parse(localStorage.getItem("products"))||[];
+let sales=JSON.parse(localStorage.getItem("sales"))||[];
 
-function login(){
-let input = passwordInput.value;
-let savedPass = localStorage.getItem("posPassword");
-
-if(!savedPass){
-localStorage.setItem("posPassword", input);
-loginMessage.innerText="পাসওয়ার্ড সেট হয়েছে! আবার লগইন করুন";
-return;
+if(localStorage.getItem("loggedIn")==="true"){
+loginSection.classList.add("hidden");
+app.classList.remove("hidden");
+init();
 }
 
-if(input === savedPass){
+function login(){
+let pass=passwordInput.value;
+let saved=localStorage.getItem("posPass");
+if(!saved){
+localStorage.setItem("posPass",pass);
+alert("পাসওয়ার্ড সেট হয়েছে। আবার লগইন করুন");
+return;
+}
+if(pass===saved){
+localStorage.setItem("loggedIn","true");
 loginSection.classList.add("hidden");
-mainApp.classList.remove("hidden");
-updateSummary();
-updateChart();
+app.classList.remove("hidden");
+init();
 }else{
-loginMessage.innerText="ভুল পাসওয়ার্ড!";
+loginMsg.innerText="ভুল পাসওয়ার্ড";
 }
 }
 
 function logout(){
-mainApp.classList.add("hidden");
-loginSection.classList.remove("hidden");
-passwordInput.value="";
+localStorage.setItem("loggedIn","false");
+location.reload();
+}
+
+function init(){
+updateProductList();
+updateSummary();
+updateTable();
+updateChart();
+}
+
+function addProduct(){
+let p={name:pName.value,buy:+pBuy.value,sell:+pSell.value,stock:+pStock.value};
+products.push(p);
+localStorage.setItem("products",JSON.stringify(products));
+updateProductList();
+alert("পণ্য যোগ হয়েছে");
+}
+
+function updateProductList(){
+saleProduct.innerHTML="";
+products.forEach((p,i)=>{
+saleProduct.innerHTML+=`<option value="${i}">${p.name} (স্টক:${p.stock})</option>`;
+});
+}
+
+function makeSale(){
+let i=saleProduct.value;
+let qty=+saleQty.value;
+if(products[i].stock<qty){alert("স্টক কম");return;}
+let total=qty*products[i].sell;
+let profit=qty*(products[i].sell-products[i].buy);
+products[i].stock-=qty;
+sales.push({name:products[i].name,qty,total,profit,date:new Date().toLocaleDateString()});
+localStorage.setItem("sales",JSON.stringify(sales));
+localStorage.setItem("products",JSON.stringify(products));
+updateProductList();
+updateSummary();
+updateTable();
+updateChart();
+printInvoice(products[i].name,qty,total);
 }
 
 function updateSummary(){
-let totalSum=0, profitSum=0;
-sales.forEach(item=>{
-totalSum+=item.total;
-profitSum+=item.profit;
+let t=0,p=0;
+sales.forEach(s=>{t+=s.total;p+=s.profit});
+totalSale.innerText=t;
+totalProfit.innerText=p;
+}
+
+function updateTable(){
+saleTable.innerHTML="";
+sales.forEach((s,i)=>{
+saleTable.innerHTML+=`<tr>
+<td>${s.name}</td>
+<td>${s.qty}</td>
+<td>${s.total}</td>
+<td>${s.profit}</td>
+<td><button onclick="deleteSale(${i})" class="btn btn-sm btn-danger">ডিলিট</button></td>
+</tr>`;
 });
-grandTotal.innerText=totalSum;
-grandProfit.innerText=profitSum;
+}
+
+function deleteSale(i){
+sales.splice(i,1);
+localStorage.setItem("sales",JSON.stringify(sales));
+updateSummary();
+updateTable();
+updateChart();
 }
 
 function updateChart(){
 let dates={};
-sales.forEach(item=>{
-if(!dates[item.date]) dates[item.date]=0;
-dates[item.date]+=item.total;
+sales.forEach(s=>{
+if(!dates[s.date])dates[s.date]=0;
+dates[s.date]+=s.total;
 });
-
-let labels=Object.keys(dates);
-let data=Object.values(dates);
-
-new Chart(document.getElementById("salesChart"),{
+new Chart(document.getElementById("chart"),{
 type:"bar",
-data:{
-labels:labels,
-datasets:[{
-label:"Daily Sales ৳",
-data:data
-}]
-}
+data:{labels:Object.keys(dates),
+datasets:[{label:"Daily Sales",data:Object.values(dates)}]}
 });
+}
+
+function printInvoice(name,qty,total){
+printArea.classList.remove("hidden");
+printArea.innerHTML=`
+<h3>ইমরান ইলেকট্রনিক্স এন্ড মোবাইল সার্ভিসিং সেন্টার</h3>
+<p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর</p>
+<p>মোবাইল: ০১৯৫২৩২৫৯০৩</p>
+<hr>
+<p>তারিখ: ${new Date().toLocaleString()}</p>
+<p>পণ্য: ${name}</p>
+<p>পরিমাণ: ${qty}</p>
+<h4>মোট: ${total} ৳</h4>
+<hr>
+<p>ধন্যবাদ</p>
+`;
+window.print();
+printArea.classList.add("hidden");
+}
+
+function resetData(){
+if(confirm("সব ডাটা ডিলিট করবেন?")){
+localStorage.clear();
+location.reload();
+}
 }
 
 </script>
-
 </body>
 </html>
