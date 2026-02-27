@@ -3,83 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>আমার দোকান POS</title>
+<title>ইমরান ইলেকট্রনিক্স POS</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body { background:#f4f6f9; }
+.header { background:#0d6efd; color:white; padding:15px; border-radius:10px; }
+.total-box { font-size:22px; font-weight:bold; }
+.footer { font-size:12px; color:gray; text-align:center; margin-top:20px; }
+</style>
 </head>
 
-<body class="bg-light">
+<body>
 
-<div class="container py-4">
-    <h2 class="text-center mb-4">আমার দোকান POS সিস্টেম</h2>
+<div class="container py-3">
 
-    <div class="card p-3 shadow-sm">
+<div class="header text-center mb-3">
+<h4>ইমরান ইলেকট্রনিক্স অ্যান্ড মোবাইল সার্ভিসিং সেন্টার</h4>
+<small>গদখালি বাজার, ঝিকরগাছা, যশোর</small>
+</div>
 
-        <div class="mb-3">
-            <label class="form-label">পণ্যের নাম</label>
-            <input type="text" class="form-control" id="productName" placeholder="পণ্যের নাম লিখুন">
-        </div>
+<div class="card shadow-sm p-3">
 
-        <div class="mb-3">
-            <label class="form-label">পরিমাণ</label>
-            <input type="number" class="form-control" id="quantity" placeholder="পরিমাণ" oninput="calculateTotal()">
-        </div>
+<div class="row g-3">
 
-        <div class="mb-3">
-            <label class="form-label">দাম (৳)</label>
-            <input type="number" class="form-control" id="price" placeholder="দাম" oninput="calculateTotal()">
-        </div>
+<div class="col-12">
+<label class="form-label">পণ্যের নাম</label>
+<input type="text" id="productName" class="form-control" placeholder="পণ্যের নাম লিখুন">
+</div>
 
-        <hr>
+<div class="col-6">
+<label class="form-label">পরিমাণ</label>
+<input type="number" id="quantity" class="form-control" oninput="calculateTotal()" placeholder="0">
+</div>
 
-        <h4 class="text-end">মোট: <span id="total">0</span> ৳</h4>
+<div class="col-6">
+<label class="form-label">দাম (৳)</label>
+<input type="number" id="price" class="form-control" oninput="calculateTotal()" placeholder="0">
+</div>
 
-        <button class="btn btn-success w-100 mt-3" onclick="saveSale()">বিক্রি সংরক্ষণ</button>
+</div>
 
-    </div>
+<hr>
 
-    <div class="card mt-4 p-3 shadow-sm">
-        <h5>আজকের বিক্রি</h5>
-        <ul id="salesList" class="list-group"></ul>
-    </div>
+<div class="d-flex justify-content-between total-box">
+<span>মোট:</span>
+<span id="total">0 ৳</span>
+</div>
+
+<button class="btn btn-success w-100 mt-3" onclick="saveSale()">বিক্রি সংরক্ষণ</button>
+
+<button class="btn btn-danger w-100 mt-2" onclick="clearAll()">সব ডাটা মুছুন</button>
+
+</div>
+
+<div class="card mt-4 shadow-sm p-3">
+<h5>আজকের বিক্রির তালিকা</h5>
+<ul id="salesList" class="list-group"></ul>
+</div>
+
+<div class="footer">
+© 2026 Imran Electronics POS System
+</div>
+
 </div>
 
 <script>
 
-function calculateTotal() {
-    let quantity = document.getElementById("quantity").value;
-    let price = document.getElementById("price").value;
+let sales = JSON.parse(localStorage.getItem("sales")) || [];
 
-    quantity = parseFloat(quantity) || 0;
-    price = parseFloat(price) || 0;
-
-    let total = quantity * price;
-    document.getElementById("total").innerText = total;
+function calculateTotal(){
+let q = parseFloat(document.getElementById("quantity").value) || 0;
+let p = parseFloat(document.getElementById("price").value) || 0;
+document.getElementById("total").innerText = (q*p) + " ৳";
 }
 
-function saveSale() {
-    let name = document.getElementById("productName").value;
-    let quantity = document.getElementById("quantity").value;
-    let price = document.getElementById("price").value;
-    let total = document.getElementById("total").innerText;
+function saveSale(){
 
-    if(name === "" || quantity === "" || price === "") {
-        alert("সব ঘর পূরণ করুন");
-        return;
-    }
+let name = document.getElementById("productName").value;
+let quantity = document.getElementById("quantity").value;
+let price = document.getElementById("price").value;
+let total = document.getElementById("total").innerText;
 
-    let saleItem = name + " - " + quantity + " x " + price + " = " + total + " ৳";
-
-    let li = document.createElement("li");
-    li.className = "list-group-item";
-    li.innerText = saleItem;
-
-    document.getElementById("salesList").appendChild(li);
-
-    document.getElementById("productName").value = "";
-    document.getElementById("quantity").value = "";
-    document.getElementById("price").value = "";
-    document.getElementById("total").innerText = "0";
+if(name=="" || quantity=="" || price==""){
+alert("সব তথ্য পূরণ করুন");
+return;
 }
+
+let sale = {
+name:name,
+quantity:quantity,
+price:price,
+total:total
+};
+
+sales.push(sale);
+localStorage.setItem("sales", JSON.stringify(sales));
+displaySales();
+resetForm();
+}
+
+function displaySales(){
+
+let list = document.getElementById("salesList");
+list.innerHTML="";
+
+sales.forEach((item,index)=>{
+
+let li = document.createElement("li");
+li.className="list-group-item d-flex justify-content-between align-items-center";
+
+li.innerHTML = `
+<div>
+<strong>${item.name}</strong><br>
+${item.quantity} x ${item.price} = ${item.total}
+</div>
+<button class="btn btn-sm btn-outline-danger" onclick="deleteSale(${index})">✖</button>
+`;
+
+list.appendChild(li);
+});
+}
+
+function deleteSale(index){
+sales.splice(index,1);
+localStorage.setItem("sales", JSON.stringify(sales));
+displaySales();
+}
+
+function clearAll(){
+if(confirm("সব ডাটা মুছতে চান?")){
+localStorage.removeItem("sales");
+sales=[];
+displaySales();
+}
+}
+
+function resetForm(){
+document.getElementById("productName").value="";
+document.getElementById("quantity").value="";
+document.getElementById("price").value="";
+document.getElementById("total").innerText="0 ৳";
+}
+
+displaySales();
 
 </script>
 
