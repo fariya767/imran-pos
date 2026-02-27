@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ইমরান ইলেকট্রনিক্স POS</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
 <style>
 body { background:#f4f6f9; }
 .header { background:#0d6efd; color:white; padding:15px; border-radius:10px; }
@@ -13,6 +14,12 @@ body { background:#f4f6f9; }
 .profit-box { background:#6f42c1; }
 .low-stock { color:red; font-weight:bold; }
 .footer { font-size:12px; color:gray; text-align:center; margin-top:20px; }
+.invoice-box { background:white; padding:20px; border-radius:10px; display:none; }
+@media print {
+  body * { visibility:hidden; }
+  #invoiceSection, #invoiceSection * { visibility:visible; }
+  #invoiceSection { position:absolute; left:0; top:0; width:100%; }
+}
 </style>
 </head>
 
@@ -33,18 +40,7 @@ body { background:#f4f6f9; }
 আজকের মোট লাভ: <span id="grandProfit">0</span> ৳
 </div>
 
-<!-- Product Add Section -->
-<div class="card p-3 mb-3 shadow-sm">
-<h5>নতুন প্রোডাক্ট যোগ করুন</h5>
-<div class="row g-2">
-<div class="col-4"><input type="text" id="newProductName" class="form-control" placeholder="নাম"></div>
-<div class="col-4"><input type="number" id="newProductStock" class="form-control" placeholder="স্টক"></div>
-<div class="col-4"><button class="btn btn-primary w-100" onclick="addProduct()">যোগ করুন</button></div>
-</div>
-</div>
-
-<!-- Sale Section -->
-<div class="card shadow-sm p-3">
+<div class="card p-3 shadow-sm">
 
 <div class="row g-3">
 
@@ -79,10 +75,20 @@ body { background:#f4f6f9; }
 
 </div>
 
-<!-- Stock List -->
-<div class="card mt-3 p-3 shadow-sm">
-<h5>স্টক তালিকা</h5>
-<ul id="stockList" class="list-group"></ul>
+<!-- Invoice Section -->
+<div id="invoiceSection" class="invoice-box mt-3 shadow-sm">
+<h4 class="text-center">ইমরান ইলেকট্রনিক্স</h4>
+<p class="text-center">গদখালি বাজার, ঝিকরগাছা, যশোর</p>
+<hr>
+<p>তারিখ: <span id="invDate"></span></p>
+<p>পণ্য: <span id="invProduct"></span></p>
+<p>পরিমাণ: <span id="invQty"></span></p>
+<p>একক মূল্য: <span id="invPrice"></span> ৳</p>
+<hr>
+<h5>মোট: <span id="invTotal"></span> ৳</h5>
+<hr>
+<p class="text-center">ধন্যবাদ</p>
+<button class="btn btn-primary w-100" onclick="printInvoice()">🖨️ প্রিন্ট করুন</button>
 </div>
 
 <div class="footer">
@@ -96,44 +102,20 @@ body { background:#f4f6f9; }
 let products = JSON.parse(localStorage.getItem("products")) || [];
 let sales = JSON.parse(localStorage.getItem("sales")) || [];
 
-function addProduct(){
-let name = newProductName.value;
-let stock = parseInt(newProductStock.value);
-
-if(!name || !stock){ alert("তথ্য পূরণ করুন"); return; }
-
-products.push({name, stock});
-localStorage.setItem("products", JSON.stringify(products));
-newProductName.value="";
-newProductStock.value="";
-displayProducts();
-}
-
 function displayProducts(){
 productSelect.innerHTML="";
-stockList.innerHTML="";
-
 products.forEach((item,index)=>{
-
 let option=document.createElement("option");
 option.value=index;
 option.text=item.name;
 productSelect.appendChild(option);
-
-let li=document.createElement("li");
-li.className="list-group-item d-flex justify-content-between";
-
-li.innerHTML=`${item.name} - 
-<span class="${item.stock<=5?'low-stock':''}">${item.stock} টি</span>`;
-
-stockList.appendChild(li);
 });
 }
 
 function calculateTotal(){
 let q=parseFloat(quantity.value)||0;
-let buy=parseFloat(buyPrice.value)||0;
 let sell=parseFloat(sellPrice.value)||0;
+let buy=parseFloat(buyPrice.value)||0;
 
 total.innerText=q*sell;
 profit.innerText=q*(sell-buy);
@@ -147,21 +129,20 @@ let buy=parseFloat(buyPrice.value);
 let sell=parseFloat(sellPrice.value);
 
 if(!q || !buy || !sell){ alert("তথ্য পূরণ করুন"); return; }
-
 if(products[index].stock<q){ alert("স্টক কম আছে!"); return; }
 
 products[index].stock-=q;
 
-let total=q*sell;
+let totalVal=q*sell;
 let profitVal=q*(sell-buy);
 
-sales.push({total, profit:profitVal});
+sales.push({total:totalVal, profit:profitVal});
 
 localStorage.setItem("products", JSON.stringify(products));
 localStorage.setItem("sales", JSON.stringify(sales));
 
 updateSummary();
-displayProducts();
+showInvoice(products[index].name,q,sell,totalVal);
 
 quantity.value="";
 buyPrice.value="";
@@ -178,6 +159,19 @@ profitSum+=item.profit;
 });
 grandTotal.innerText=totalSum;
 grandProfit.innerText=profitSum;
+}
+
+function showInvoice(name,qty,price,totalVal){
+invoiceSection.style.display="block";
+invDate.innerText=new Date().toLocaleString();
+invProduct.innerText=name;
+invQty.innerText=qty;
+invPrice.innerText=price;
+invTotal.innerText=totalVal;
+}
+
+function printInvoice(){
+window.print();
 }
 
 displayProducts();
