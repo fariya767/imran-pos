@@ -8,7 +8,10 @@
 <style>
 body { background:#f4f6f9; }
 .header { background:#0d6efd; color:white; padding:15px; border-radius:10px; }
-.total-box { font-size:22px; font-weight:bold; }
+.summary-box { padding:10px; border-radius:8px; color:white; text-align:center; margin-bottom:10px; }
+.sale-box { background:#198754; }
+.profit-box { background:#6f42c1; }
+.low-stock { color:red; font-weight:bold; }
 .footer { font-size:12px; color:gray; text-align:center; margin-top:20px; }
 </style>
 </head>
@@ -22,43 +25,64 @@ body { background:#f4f6f9; }
 <small>গদখালি বাজার, ঝিকরগাছা, যশোর</small>
 </div>
 
+<div class="summary-box sale-box">
+আজকের মোট বিক্রয়: <span id="grandTotal">0</span> ৳
+</div>
+
+<div class="summary-box profit-box">
+আজকের মোট লাভ: <span id="grandProfit">0</span> ৳
+</div>
+
+<!-- Product Add Section -->
+<div class="card p-3 mb-3 shadow-sm">
+<h5>নতুন প্রোডাক্ট যোগ করুন</h5>
+<div class="row g-2">
+<div class="col-4"><input type="text" id="newProductName" class="form-control" placeholder="নাম"></div>
+<div class="col-4"><input type="number" id="newProductStock" class="form-control" placeholder="স্টক"></div>
+<div class="col-4"><button class="btn btn-primary w-100" onclick="addProduct()">যোগ করুন</button></div>
+</div>
+</div>
+
+<!-- Sale Section -->
 <div class="card shadow-sm p-3">
 
 <div class="row g-3">
 
 <div class="col-12">
-<label class="form-label">পণ্যের নাম</label>
-<input type="text" id="productName" class="form-control" placeholder="পণ্যের নাম লিখুন">
+<label>পণ্য নির্বাচন</label>
+<select id="productSelect" class="form-select"></select>
 </div>
 
-<div class="col-6">
-<label class="form-label">পরিমাণ</label>
-<input type="number" id="quantity" class="form-control" oninput="calculateTotal()" placeholder="0">
+<div class="col-4">
+<label>পরিমাণ</label>
+<input type="number" id="quantity" class="form-control" oninput="calculateTotal()">
 </div>
 
-<div class="col-6">
-<label class="form-label">দাম (৳)</label>
-<input type="number" id="price" class="form-control" oninput="calculateTotal()" placeholder="0">
+<div class="col-4">
+<label>ক্রয় মূল্য</label>
+<input type="number" id="buyPrice" class="form-control" oninput="calculateTotal()">
+</div>
+
+<div class="col-4">
+<label>বিক্রয় মূল্য</label>
+<input type="number" id="sellPrice" class="form-control" oninput="calculateTotal()">
 </div>
 
 </div>
 
 <hr>
 
-<div class="d-flex justify-content-between total-box">
-<span>মোট:</span>
-<span id="total">0 ৳</span>
-</div>
+<h5 class="text-end">মোট: <span id="total">0</span> ৳</h5>
+<h6 class="text-end text-success">লাভ: <span id="profit">0</span> ৳</h6>
 
 <button class="btn btn-success w-100 mt-3" onclick="saveSale()">বিক্রি সংরক্ষণ</button>
 
-<button class="btn btn-danger w-100 mt-2" onclick="clearAll()">সব ডাটা মুছুন</button>
-
 </div>
 
-<div class="card mt-4 shadow-sm p-3">
-<h5>আজকের বিক্রির তালিকা</h5>
-<ul id="salesList" class="list-group"></ul>
+<!-- Stock List -->
+<div class="card mt-3 p-3 shadow-sm">
+<h5>স্টক তালিকা</h5>
+<ul id="stockList" class="list-group"></ul>
 </div>
 
 <div class="footer">
@@ -69,83 +93,95 @@ body { background:#f4f6f9; }
 
 <script>
 
+let products = JSON.parse(localStorage.getItem("products")) || [];
 let sales = JSON.parse(localStorage.getItem("sales")) || [];
 
+function addProduct(){
+let name = newProductName.value;
+let stock = parseInt(newProductStock.value);
+
+if(!name || !stock){ alert("তথ্য পূরণ করুন"); return; }
+
+products.push({name, stock});
+localStorage.setItem("products", JSON.stringify(products));
+newProductName.value="";
+newProductStock.value="";
+displayProducts();
+}
+
+function displayProducts(){
+productSelect.innerHTML="";
+stockList.innerHTML="";
+
+products.forEach((item,index)=>{
+
+let option=document.createElement("option");
+option.value=index;
+option.text=item.name;
+productSelect.appendChild(option);
+
+let li=document.createElement("li");
+li.className="list-group-item d-flex justify-content-between";
+
+li.innerHTML=`${item.name} - 
+<span class="${item.stock<=5?'low-stock':''}">${item.stock} টি</span>`;
+
+stockList.appendChild(li);
+});
+}
+
 function calculateTotal(){
-let q = parseFloat(document.getElementById("quantity").value) || 0;
-let p = parseFloat(document.getElementById("price").value) || 0;
-document.getElementById("total").innerText = (q*p) + " ৳";
+let q=parseFloat(quantity.value)||0;
+let buy=parseFloat(buyPrice.value)||0;
+let sell=parseFloat(sellPrice.value)||0;
+
+total.innerText=q*sell;
+profit.innerText=q*(sell-buy);
 }
 
 function saveSale(){
 
-let name = document.getElementById("productName").value;
-let quantity = document.getElementById("quantity").value;
-let price = document.getElementById("price").value;
-let total = document.getElementById("total").innerText;
+let index=productSelect.value;
+let q=parseInt(quantity.value);
+let buy=parseFloat(buyPrice.value);
+let sell=parseFloat(sellPrice.value);
 
-if(name=="" || quantity=="" || price==""){
-alert("সব তথ্য পূরণ করুন");
-return;
-}
+if(!q || !buy || !sell){ alert("তথ্য পূরণ করুন"); return; }
 
-let sale = {
-name:name,
-quantity:quantity,
-price:price,
-total:total
-};
+if(products[index].stock<q){ alert("স্টক কম আছে!"); return; }
 
-sales.push(sale);
+products[index].stock-=q;
+
+let total=q*sell;
+let profitVal=q*(sell-buy);
+
+sales.push({total, profit:profitVal});
+
+localStorage.setItem("products", JSON.stringify(products));
 localStorage.setItem("sales", JSON.stringify(sales));
-displaySales();
-resetForm();
+
+updateSummary();
+displayProducts();
+
+quantity.value="";
+buyPrice.value="";
+sellPrice.value="";
+total.innerText="0";
+profit.innerText="0";
 }
 
-function displaySales(){
-
-let list = document.getElementById("salesList");
-list.innerHTML="";
-
-sales.forEach((item,index)=>{
-
-let li = document.createElement("li");
-li.className="list-group-item d-flex justify-content-between align-items-center";
-
-li.innerHTML = `
-<div>
-<strong>${item.name}</strong><br>
-${item.quantity} x ${item.price} = ${item.total}
-</div>
-<button class="btn btn-sm btn-outline-danger" onclick="deleteSale(${index})">✖</button>
-`;
-
-list.appendChild(li);
+function updateSummary(){
+let totalSum=0, profitSum=0;
+sales.forEach(item=>{
+totalSum+=item.total;
+profitSum+=item.profit;
 });
+grandTotal.innerText=totalSum;
+grandProfit.innerText=profitSum;
 }
 
-function deleteSale(index){
-sales.splice(index,1);
-localStorage.setItem("sales", JSON.stringify(sales));
-displaySales();
-}
-
-function clearAll(){
-if(confirm("সব ডাটা মুছতে চান?")){
-localStorage.removeItem("sales");
-sales=[];
-displaySales();
-}
-}
-
-function resetForm(){
-document.getElementById("productName").value="";
-document.getElementById("quantity").value="";
-document.getElementById("price").value="";
-document.getElementById("total").innerText="0 ৳";
-}
-
-displaySales();
+displayProducts();
+updateSummary();
 
 </script>
 
