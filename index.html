@@ -12,9 +12,9 @@ body { background:#f4f6f9; }
 .summary-box { padding:10px; border-radius:8px; color:white; text-align:center; margin-bottom:10px; }
 .sale-box { background:#198754; }
 .profit-box { background:#6f42c1; }
-.low-stock { color:red; font-weight:bold; }
 .footer { font-size:12px; color:gray; text-align:center; margin-top:20px; }
 .invoice-box { background:white; padding:20px; border-radius:10px; display:none; }
+.due-box { background:white; padding:15px; border-radius:10px; margin-top:15px; }
 @media print {
   body * { visibility:hidden; }
   #invoiceSection, #invoiceSection * { visibility:visible; }
@@ -64,6 +64,11 @@ body { background:#f4f6f9; }
 <input type="number" id="sellPrice" class="form-control" oninput="calculateTotal()">
 </div>
 
+<div class="col-12">
+<label>কাস্টমারের নাম (বাকি হলে)</label>
+<input type="text" id="customerName" class="form-control" placeholder="ঐচ্ছিক">
+</div>
+
 </div>
 
 <hr>
@@ -75,20 +80,23 @@ body { background:#f4f6f9; }
 
 </div>
 
-<!-- Invoice Section -->
+<!-- Invoice -->
 <div id="invoiceSection" class="invoice-box mt-3 shadow-sm">
 <h4 class="text-center">ইমরান ইলেকট্রনিক্স</h4>
-<p class="text-center">গদখালি বাজার, ঝিকরগাছা, যশোর</p>
 <hr>
 <p>তারিখ: <span id="invDate"></span></p>
+<p>কাস্টমার: <span id="invCustomer"></span></p>
 <p>পণ্য: <span id="invProduct"></span></p>
 <p>পরিমাণ: <span id="invQty"></span></p>
-<p>একক মূল্য: <span id="invPrice"></span> ৳</p>
 <hr>
 <h5>মোট: <span id="invTotal"></span> ৳</h5>
-<hr>
-<p class="text-center">ধন্যবাদ</p>
 <button class="btn btn-primary w-100" onclick="printInvoice()">🖨️ প্রিন্ট করুন</button>
+</div>
+
+<!-- Due List -->
+<div class="due-box shadow-sm">
+<h5>বাকি তালিকা</h5>
+<ul id="dueList" class="list-group"></ul>
 </div>
 
 <div class="footer">
@@ -101,6 +109,7 @@ body { background:#f4f6f9; }
 
 let products = JSON.parse(localStorage.getItem("products")) || [];
 let sales = JSON.parse(localStorage.getItem("sales")) || [];
+let dues = JSON.parse(localStorage.getItem("dues")) || [];
 
 function displayProducts(){
 productSelect.innerHTML="";
@@ -116,7 +125,6 @@ function calculateTotal(){
 let q=parseFloat(quantity.value)||0;
 let sell=parseFloat(sellPrice.value)||0;
 let buy=parseFloat(buyPrice.value)||0;
-
 total.innerText=q*sell;
 profit.innerText=q*(sell-buy);
 }
@@ -127,6 +135,7 @@ let index=productSelect.value;
 let q=parseInt(quantity.value);
 let buy=parseFloat(buyPrice.value);
 let sell=parseFloat(sellPrice.value);
+let customer=customerName.value;
 
 if(!q || !buy || !sell){ alert("তথ্য পূরণ করুন"); return; }
 if(products[index].stock<q){ alert("স্টক কম আছে!"); return; }
@@ -138,15 +147,22 @@ let profitVal=q*(sell-buy);
 
 sales.push({total:totalVal, profit:profitVal});
 
+if(customer){
+dues.push({name:customer, amount:totalVal});
+}
+
 localStorage.setItem("products", JSON.stringify(products));
 localStorage.setItem("sales", JSON.stringify(sales));
+localStorage.setItem("dues", JSON.stringify(dues));
 
 updateSummary();
-showInvoice(products[index].name,q,sell,totalVal);
+displayDueList();
+showInvoice(customer,products[index].name,q,totalVal);
 
 quantity.value="";
 buyPrice.value="";
 sellPrice.value="";
+customerName.value="";
 total.innerText="0";
 profit.innerText="0";
 }
@@ -161,12 +177,29 @@ grandTotal.innerText=totalSum;
 grandProfit.innerText=profitSum;
 }
 
-function showInvoice(name,qty,price,totalVal){
+function displayDueList(){
+dueList.innerHTML="";
+dues.forEach((item,index)=>{
+let li=document.createElement("li");
+li.className="list-group-item d-flex justify-content-between";
+li.innerHTML=`${item.name} - ${item.amount} ৳ 
+<button class="btn btn-sm btn-danger" onclick="clearDue(${index})">পরিশোধ</button>`;
+dueList.appendChild(li);
+});
+}
+
+function clearDue(index){
+dues.splice(index,1);
+localStorage.setItem("dues", JSON.stringify(dues));
+displayDueList();
+}
+
+function showInvoice(customer,product,qty,totalVal){
 invoiceSection.style.display="block";
 invDate.innerText=new Date().toLocaleString();
-invProduct.innerText=name;
+invCustomer.innerText=customer || "Cash";
+invProduct.innerText=product;
 invQty.innerText=qty;
-invPrice.innerText=price;
 invTotal.innerText=totalVal;
 }
 
@@ -176,6 +209,7 @@ window.print();
 
 displayProducts();
 updateSummary();
+displayDueList();
 
 </script>
 
