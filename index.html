@@ -15,23 +15,29 @@ body { background:#f4f6f9; }
 .sale-box { background:#198754; }
 .profit-box { background:#6f42c1; }
 .footer { font-size:12px; color:gray; text-align:center; margin-top:20px; }
-.invoice-box { background:white; padding:20px; border-radius:10px; display:none; }
-.due-box, .report-box { background:white; padding:15px; border-radius:10px; margin-top:15px; }
-@media print {
-  body * { visibility:hidden; }
-  #invoiceSection, #invoiceSection * { visibility:visible; }
-  #invoiceSection { position:absolute; left:0; top:0; width:100%; }
-}
+.card-box { background:white; padding:15px; border-radius:10px; margin-top:15px; }
+.hidden { display:none; }
 </style>
 </head>
 
 <body>
 
-<div class="container py-3">
+<div class="container py-4">
+
+<!-- Login Section -->
+<div id="loginSection" class="card-box shadow-sm">
+<h4 class="text-center">🔐 POS লগইন</h4>
+<input type="password" id="passwordInput" class="form-control mt-3" placeholder="পাসওয়ার্ড লিখুন">
+<button class="btn btn-primary w-100 mt-3" onclick="login()">লগইন</button>
+<p class="text-center mt-3" id="loginMessage"></p>
+</div>
+
+<!-- Main POS -->
+<div id="mainApp" class="hidden">
 
 <div class="header text-center mb-3">
 <h4>ইমরান ইলেকট্রনিক্স অ্যান্ড মোবাইল সার্ভিসিং সেন্টার</h4>
-<small>গদখালি বাজার, ঝিকরগাছা, যশোর</small>
+<button class="btn btn-light btn-sm float-end" onclick="logout()">লগআউট</button>
 </div>
 
 <div class="summary-box sale-box">
@@ -42,68 +48,8 @@ body { background:#f4f6f9; }
 মোট লাভ: <span id="grandProfit">0</span> ৳
 </div>
 
-<div class="card p-3 shadow-sm">
-
-<div class="row g-3">
-
-<div class="col-12">
-<label>পণ্য নির্বাচন</label>
-<select id="productSelect" class="form-select"></select>
-</div>
-
-<div class="col-4">
-<label>পরিমাণ</label>
-<input type="number" id="quantity" class="form-control" oninput="calculateTotal()">
-</div>
-
-<div class="col-4">
-<label>ক্রয় মূল্য</label>
-<input type="number" id="buyPrice" class="form-control" oninput="calculateTotal()">
-</div>
-
-<div class="col-4">
-<label>বিক্রয় মূল্য</label>
-<input type="number" id="sellPrice" class="form-control" oninput="calculateTotal()">
-</div>
-
-<div class="col-12">
-<label>কাস্টমারের নাম (বাকি হলে)</label>
-<input type="text" id="customerName" class="form-control">
-</div>
-
-</div>
-
-<hr>
-
-<h5 class="text-end">মোট: <span id="total">0</span> ৳</h5>
-<h6 class="text-end text-success">লাভ: <span id="profit">0</span> ৳</h6>
-
-<button class="btn btn-success w-100 mt-3" onclick="saveSale()">বিক্রি সংরক্ষণ</button>
-
-</div>
-
-<!-- Invoice -->
-<div id="invoiceSection" class="invoice-box mt-3 shadow-sm">
-<h4 class="text-center">ইমরান ইলেকট্রনিক্স</h4>
-<hr>
-<p>তারিখ: <span id="invDate"></span></p>
-<p>কাস্টমার: <span id="invCustomer"></span></p>
-<p>পণ্য: <span id="invProduct"></span></p>
-<p>পরিমাণ: <span id="invQty"></span></p>
-<hr>
-<h5>মোট: <span id="invTotal"></span> ৳</h5>
-<button class="btn btn-primary w-100" onclick="printInvoice()">🖨️ প্রিন্ট করুন</button>
-</div>
-
-<!-- Due List -->
-<div class="due-box shadow-sm">
-<h5>বাকি তালিকা</h5>
-<ul id="dueList" class="list-group"></ul>
-</div>
-
-<!-- Report -->
-<div class="report-box shadow-sm">
-<h5>📊 বিক্রয় রিপোর্ট</h5>
+<div class="card-box shadow-sm">
+<h5>📊 রিপোর্ট</h5>
 <canvas id="salesChart"></canvas>
 </div>
 
@@ -113,67 +59,36 @@ body { background:#f4f6f9; }
 
 </div>
 
+</div>
+
 <script>
 
-let products = JSON.parse(localStorage.getItem("products")) || [];
 let sales = JSON.parse(localStorage.getItem("sales")) || [];
-let dues = JSON.parse(localStorage.getItem("dues")) || [];
 
-function displayProducts(){
-productSelect.innerHTML="";
-products.forEach((item,index)=>{
-let option=document.createElement("option");
-option.value=index;
-option.text=item.name;
-productSelect.appendChild(option);
-});
+function login(){
+let input = passwordInput.value;
+let savedPass = localStorage.getItem("posPassword");
+
+if(!savedPass){
+localStorage.setItem("posPassword", input);
+loginMessage.innerText="পাসওয়ার্ড সেট হয়েছে! আবার লগইন করুন";
+return;
 }
 
-function calculateTotal(){
-let q=parseFloat(quantity.value)||0;
-let sell=parseFloat(sellPrice.value)||0;
-let buy=parseFloat(buyPrice.value)||0;
-total.innerText=q*sell;
-profit.innerText=q*(sell-buy);
-}
-
-function saveSale(){
-let index=productSelect.value;
-let q=parseInt(quantity.value);
-let buy=parseFloat(buyPrice.value);
-let sell=parseFloat(sellPrice.value);
-let customer=customerName.value;
-
-if(!q || !buy || !sell){ alert("তথ্য পূরণ করুন"); return; }
-if(products[index].stock<q){ alert("স্টক কম আছে!"); return; }
-
-products[index].stock-=q;
-
-let totalVal=q*sell;
-let profitVal=q*(sell-buy);
-let date=new Date().toLocaleDateString();
-
-sales.push({total:totalVal, profit:profitVal, date});
-
-if(customer){
-dues.push({name:customer, amount:totalVal});
-}
-
-localStorage.setItem("products", JSON.stringify(products));
-localStorage.setItem("sales", JSON.stringify(sales));
-localStorage.setItem("dues", JSON.stringify(dues));
-
+if(input === savedPass){
+loginSection.classList.add("hidden");
+mainApp.classList.remove("hidden");
 updateSummary();
-displayDueList();
 updateChart();
-showInvoice(customer,products[index].name,q,totalVal);
+}else{
+loginMessage.innerText="ভুল পাসওয়ার্ড!";
+}
+}
 
-quantity.value="";
-buyPrice.value="";
-sellPrice.value="";
-customerName.value="";
-total.innerText="0";
-profit.innerText="0";
+function logout(){
+mainApp.classList.add("hidden");
+loginSection.classList.remove("hidden");
+passwordInput.value="";
 }
 
 function updateSummary(){
@@ -184,36 +99,6 @@ profitSum+=item.profit;
 });
 grandTotal.innerText=totalSum;
 grandProfit.innerText=profitSum;
-}
-
-function displayDueList(){
-dueList.innerHTML="";
-dues.forEach((item,index)=>{
-let li=document.createElement("li");
-li.className="list-group-item d-flex justify-content-between";
-li.innerHTML=`${item.name} - ${item.amount} ৳ 
-<button class="btn btn-sm btn-danger" onclick="clearDue(${index})">পরিশোধ</button>`;
-dueList.appendChild(li);
-});
-}
-
-function clearDue(index){
-dues.splice(index,1);
-localStorage.setItem("dues", JSON.stringify(dues));
-displayDueList();
-}
-
-function showInvoice(customer,product,qty,totalVal){
-invoiceSection.style.display="block";
-invDate.innerText=new Date().toLocaleString();
-invCustomer.innerText=customer || "Cash";
-invProduct.innerText=product;
-invQty.innerText=qty;
-invTotal.innerText=totalVal;
-}
-
-function printInvoice(){
-window.print();
 }
 
 function updateChart(){
@@ -237,11 +122,6 @@ data:data
 }
 });
 }
-
-displayProducts();
-updateSummary();
-displayDueList();
-updateChart();
 
 </script>
 
