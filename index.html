@@ -3,20 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ইমরান ইলেকট্রনিক্স POS</title>
+<title>Imran Electronics POS</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { background:#f4f6f9; }
-.header { background:#0d6efd; color:white; padding:15px; border-radius:10px; }
-.card-box { background:white; padding:15px; border-radius:10px; margin-top:15px; }
-.hidden { display:none; }
-@media print {
-    body * { visibility: hidden; }
-    #invoiceSection, #invoiceSection * { visibility: visible; }
-    #invoiceSection { position:absolute; left:0; top:0; width:100%; }
+body{background:#f4f6f9;}
+.header{background:#0d6efd;color:white;padding:15px;border-radius:10px;}
+.card-box{background:white;padding:15px;border-radius:10px;margin-top:15px;}
+.summary{color:white;padding:15px;border-radius:10px;text-align:center;}
+.s1{background:#198754;}
+.s2{background:#6f42c1;}
+.s3{background:#dc3545;}
+.s4{background:#fd7e14;}
+.s5{background:#0dcaf0;}
+.hidden{display:none;}
+@media print{
+body *{visibility:hidden;}
+#invoiceSection,#invoiceSection *{visibility:visible;}
+#invoiceSection{position:absolute;left:0;top:0;width:100%;}
 }
 </style>
 </head>
@@ -24,15 +30,15 @@ body { background:#f4f6f9; }
 <body>
 <div class="container py-4">
 
-<!-- Login -->
+<!-- LOGIN -->
 <div id="loginSection" class="card-box shadow-sm">
 <h4 class="text-center">🔐 POS লগইন</h4>
 <input type="password" id="passwordInput" class="form-control mt-3" placeholder="পাসওয়ার্ড">
 <button class="btn btn-primary w-100 mt-3" onclick="login()">লগইন</button>
-<p class="text-center mt-3" id="loginMessage"></p>
+<p id="loginMessage" class="text-center mt-2"></p>
 </div>
 
-<!-- Main App -->
+<!-- MAIN APP -->
 <div id="mainApp" class="hidden">
 
 <div class="header text-center mb-3">
@@ -42,7 +48,16 @@ body { background:#f4f6f9; }
 <button class="btn btn-light btn-sm float-end" onclick="logout()">লগআউট</button>
 </div>
 
-<!-- Add Product -->
+<!-- SUMMARY -->
+<div class="row">
+<div class="col-md-4 col-6"><div class="summary s1">মোট বিক্রয়<br><span id="totalSale">0</span> ৳</div></div>
+<div class="col-md-4 col-6"><div class="summary s2">মোট লাভ<br><span id="totalProfit">0</span> ৳</div></div>
+<div class="col-md-4 col-6"><div class="summary s3">মোট বাকি<br><span id="totalDue">0</span> ৳</div></div>
+<div class="col-md-4 col-6 mt-2"><div class="summary s4">মোট পণ্য<br><span id="totalProducts">0</span></div></div>
+<div class="col-md-4 col-6 mt-2"><div class="summary s5">স্টক ভ্যালু<br><span id="stockValue">0</span> ৳</div></div>
+</div>
+
+<!-- PRODUCT ADD -->
 <div class="card-box">
 <h5>➕ পণ্য যোগ করুন</h5>
 <input id="pName" class="form-control mt-2" placeholder="পণ্যের নাম">
@@ -52,7 +67,7 @@ body { background:#f4f6f9; }
 <button class="btn btn-success mt-2" onclick="addProduct()">Add Product</button>
 </div>
 
-<!-- Sales Section -->
+<!-- SALES -->
 <div class="card-box">
 <h5>🛒 বিক্রয়</h5>
 
@@ -61,46 +76,35 @@ body { background:#f4f6f9; }
 <button class="btn btn-primary mt-2" onclick="addToCart()">Add To Cart</button>
 
 <table class="table mt-3">
-<thead>
-<tr>
-<th>পণ্য</th>
-<th>পরিমাণ</th>
-<th>দাম</th>
-<th>মোট</th>
-<th></th>
-</tr>
-</thead>
+<thead><tr><th>পণ্য</th><th>Qty</th><th>দাম</th><th>মোট</th><th></th></tr></thead>
 <tbody id="cartTable"></tbody>
 </table>
 
-<div>
 মোট: <span id="subtotal">0</span> ৳ <br>
 Paid: <input type="number" id="paid" oninput="calculateDue()"><br>
-Due: <span id="due">0</span> ৳
-</div>
+Due: <span id="due">0</span> ৳ <br>
 
 <button class="btn btn-success mt-2" onclick="finalizeSale()">Final Sale</button>
 <button class="btn btn-secondary mt-2" onclick="printInvoice()">Print</button>
-
 </div>
 
-<!-- Report -->
+<!-- REPORT -->
 <div class="card-box">
 <h5>📊 রিপোর্ট</h5>
 <canvas id="salesChart"></canvas>
 </div>
 
-<!-- Invoice Print Section -->
 <div id="invoiceSection" class="hidden"></div>
 
 </div>
 </div>
 
 <script>
-let products = JSON.parse(localStorage.getItem("products")) || [];
-let sales = JSON.parse(localStorage.getItem("sales")) || [];
-let cart = [];
-let invoiceCounter = localStorage.getItem("invoiceCounter") || 1;
+let products=JSON.parse(localStorage.getItem("products"))||[];
+let sales=JSON.parse(localStorage.getItem("sales"))||[];
+let cart=[];
+let invoiceCounter=localStorage.getItem("invoiceCounter")||1;
+let chartInstance=null;
 
 function login(){
 let input=passwordInput.value;
@@ -111,146 +115,125 @@ loginMessage.innerText="পাসওয়ার্ড সেট হয়েছে";
 return;
 }
 if(input===saved){
-loginSection.classList.add("hidden");
-mainApp.classList.remove("hidden");
-loadProducts();
-updateChart();
-}else{
-loginMessage.innerText="ভুল পাসওয়ার্ড";
-}
+localStorage.setItem("isLoggedIn","true");
+showApp();
+}else loginMessage.innerText="ভুল পাসওয়ার্ড";
 }
 
 function logout(){
-mainApp.classList.add("hidden");
-loginSection.classList.remove("hidden");
+localStorage.removeItem("isLoggedIn");
+location.reload();
 }
+
+function showApp(){
+loginSection.classList.add("hidden");
+mainApp.classList.remove("hidden");
+loadProducts();
+updateDashboard();
+updateChart();
+}
+
+window.onload=function(){
+if(localStorage.getItem("isLoggedIn")==="true") showApp();
+};
 
 function addProduct(){
 let name=pName.value;
 let price=parseFloat(pPrice.value);
 let cost=parseFloat(pCost.value);
 let stock=parseInt(pStock.value);
-if(!name||price<=0||cost<0||stock<0){alert("সঠিক তথ্য দিন");return;}
+if(!name||price<=0||cost<0||stock<0)return alert("সঠিক তথ্য দিন");
 products.push({name,price,cost,stock});
 localStorage.setItem("products",JSON.stringify(products));
 loadProducts();
-alert("পণ্য যোগ হয়েছে");
+updateDashboard();
 }
 
 function loadProducts(){
-let select=document.getElementById("productSelect");
-select.innerHTML="";
+productSelect.innerHTML="";
 products.forEach(p=>{
-select.innerHTML+=`<option value="${p.name}">${p.name} (স্টক: ${p.stock})</option>`;
+productSelect.innerHTML+=`<option value="${p.name}">${p.name} (স্টক:${p.stock})</option>`;
 });
 }
 
 function addToCart(){
 let name=productSelect.value;
 let qty=parseInt(document.getElementById("qty").value);
-if(!name||qty<=0){alert("সঠিক পরিমাণ দিন");return;}
 let product=products.find(p=>p.name===name);
-if(product.stock<qty){alert("স্টক কম");return;}
+if(!name||qty<=0||product.stock<qty)return alert("সমস্যা আছে");
 let existing=cart.find(c=>c.name===name);
-if(existing){existing.qty+=qty;}
-else{cart.push({name,price:product.price,cost:product.cost,qty});}
+if(existing)existing.qty+=qty;
+else cart.push({name,price:product.price,cost:product.cost,qty});
 updateCart();
 }
 
 function updateCart(){
-let table=document.getElementById("cartTable");
-table.innerHTML="";
+cartTable.innerHTML="";
 let total=0;
 cart.forEach((item,i)=>{
-let rowTotal=item.price*item.qty;
-total+=rowTotal;
-table.innerHTML+=`<tr>
-<td>${item.name}</td>
-<td>${item.qty}</td>
-<td>${item.price}</td>
-<td>${rowTotal}</td>
-<td><button onclick="removeItem(${i})" class="btn btn-danger btn-sm">X</button></td>
-</tr>`;
+let t=item.price*item.qty;
+total+=t;
+cartTable.innerHTML+=`<tr>
+<td>${item.name}</td><td>${item.qty}</td>
+<td>${item.price}</td><td>${t}</td>
+<td><button onclick="removeItem(${i})" class="btn btn-danger btn-sm">X</button></td></tr>`;
 });
 subtotal.innerText=total;
 calculateDue();
 }
 
-function removeItem(i){
-cart.splice(i,1);
-updateCart();
-}
+function removeItem(i){cart.splice(i,1);updateCart();}
 
 function calculateDue(){
 let total=parseFloat(subtotal.innerText)||0;
 let paid=parseFloat(document.getElementById("paid").value)||0;
-if(paid>total){alert("Paid বেশি দেয়া যাবে না");paid=total;paid.value=total;}
+if(paid>total){alert("Paid বেশি");document.getElementById("paid").value=total;paid=total;}
 due.innerText=total-paid;
 }
 
 function finalizeSale(){
-if(cart.length==0){alert("কার্ট খালি");return;}
+if(cart.length==0)return alert("কার্ট খালি");
 let total=parseFloat(subtotal.innerText);
 let paid=parseFloat(document.getElementById("paid").value)||0;
 let dueAmount=total-paid;
 let profit=0;
 cart.forEach(item=>{
-let product=products.find(p=>p.name===item.name);
-product.stock-=item.qty;
+let p=products.find(pr=>pr.name===item.name);
+p.stock-=item.qty;
 profit+=(item.price-item.cost)*item.qty;
 });
 let invoice="INV-"+invoiceCounter.toString().padStart(4,"0");
 sales.push({invoice,items:cart,total,paid,due:dueAmount,profit,date:new Date().toISOString().split("T")[0]});
 localStorage.setItem("sales",JSON.stringify(sales));
 localStorage.setItem("products",JSON.stringify(products));
-invoiceCounter++;
-localStorage.setItem("invoiceCounter",invoiceCounter);
-generateInvoice(invoice);
-cart=[];
-updateCart();
-loadProducts();
-updateChart();
+invoiceCounter++;localStorage.setItem("invoiceCounter",invoiceCounter);
+cart=[];updateCart();loadProducts();updateDashboard();updateChart();
 alert("বিক্রয় সম্পন্ন");
 }
 
-function generateInvoice(inv){
-let sale=sales.find(s=>s.invoice===inv);
-let html=`<h4>ইমরান ইলেকট্রনিক্স এন্ড মোবাইল সার্ভিসিং সেন্টার</h4>
-<p>রহিম সরদার মার্কেট, গদখালী বাজার, ঝিকরগাছা, যশোর<br>মোবাইল: ০১৯৫২৩২৫৯০৩</p>
-<hr>
-Invoice: ${sale.invoice}<br>
-Date: ${sale.date}
-<table class="table">
-<tr><th>পণ্য</th><th>পরিমাণ</th><th>দাম</th><th>মোট</th></tr>`;
-sale.items.forEach(i=>{
-html+=`<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.price}</td><td>${i.price*i.qty}</td></tr>`;
-});
-html+=`</table>
-Total: ${sale.total} ৳<br>
-Paid: ${sale.paid} ৳<br>
-Due: ${sale.due} ৳`;
-invoiceSection.innerHTML=html;
-}
-
-function printInvoice(){
-invoiceSection.classList.remove("hidden");
-window.print();
-invoiceSection.classList.add("hidden");
+function updateDashboard(){
+let totalSale=0,totalProfit=0,totalDue=0,stockValue=0;
+sales.forEach(s=>{totalSale+=s.total;totalProfit+=s.profit;totalDue+=s.due;});
+products.forEach(p=>{stockValue+=p.cost*p.stock;});
+document.getElementById("totalSale").innerText=totalSale;
+document.getElementById("totalProfit").innerText=totalProfit;
+document.getElementById("totalDue").innerText=totalDue;
+document.getElementById("totalProducts").innerText=products.length;
+document.getElementById("stockValue").innerText=stockValue;
 }
 
 function updateChart(){
 let dates={};
-sales.forEach(s=>{
-if(!dates[s.date])dates[s.date]=0;
-dates[s.date]+=s.total;
-});
-new Chart(document.getElementById("salesChart"),{
+sales.forEach(s=>{if(!dates[s.date])dates[s.date]=0;dates[s.date]+=s.total;});
+if(chartInstance)chartInstance.destroy();
+chartInstance=new Chart(document.getElementById("salesChart"),{
 type:"bar",
 data:{labels:Object.keys(dates),
 datasets:[{label:"Daily Sales ৳",data:Object.values(dates)}]}
 });
 }
-</script>
 
+function printInvoice(){window.print();}
+</script>
 </body>
 </html>
